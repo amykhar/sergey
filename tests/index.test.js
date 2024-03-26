@@ -1,27 +1,23 @@
-const {
-  compileTemplate,
-  compileLinks,
-  primeImport,
-  IMPORTS,
-  ACTIVE_CLASS
-} = require('../src');
+import {
+  compileTemplate, compileLinks, primeImport, IMPORTS, ACTIVE_CLASS,
+} from '../src';
 
 const wrapper = (x = '') => `<html>
-  <body>
-    ${x}
-  </body>
-</html>`;
+    <body>
+      ${x}
+    </body>
+  </html>`;
 
 const header = (x = '') => `<header>
-  <a href="/">Home</a>
-  ${x}
-</header>`;
+    <a href="/">Home</a>
+    ${x}
+  </header>`;
 
 const footer = () => `<footer>
-  &copy; 2019
-</footer>`;
+    &copy; 2019
+  </footer>`;
 
-const testImport = file => `${IMPORTS}${file}`;
+const testImport = (file) => `${IMPORTS}${file}`;
 
 describe('Slot compilation', () => {
   test('Zero compilation', () => {
@@ -101,7 +97,7 @@ describe('Slot compilation', () => {
   test('Named slot', () => {
     const namedContent = 'Named content';
 
-    const input = wrapper(`<sergey-slot name="named" />`);
+    const input = wrapper('<sergey-slot name="named" />');
     const desiredOutput = wrapper(namedContent);
 
     const output = compileTemplate(input, { named: namedContent });
@@ -112,7 +108,7 @@ describe('Slot compilation', () => {
   test('Named slot with underscores', () => {
     const namedContent = 'Named content';
 
-    const input = wrapper(`<sergey-slot name="named_slot" />`);
+    const input = wrapper('<sergey-slot name="named_slot" />');
     const desiredOutput = wrapper(namedContent);
 
     const output = compileTemplate(input, { named_slot: namedContent });
@@ -123,7 +119,7 @@ describe('Slot compilation', () => {
   test('Named slot with spaceless tag', () => {
     const namedContent = 'Named content';
 
-    const input = wrapper(`<sergey-slot name="named"/>`);
+    const input = wrapper('<sergey-slot name="named"/>');
     const desiredOutput = wrapper(namedContent);
 
     const output = compileTemplate(input, { named: namedContent });
@@ -134,7 +130,7 @@ describe('Slot compilation', () => {
   test('Named slot with full tag', () => {
     const namedContent = 'Named content';
 
-    const input = wrapper(`<sergey-slot name="named"></sergey-slot>`);
+    const input = wrapper('<sergey-slot name="named"></sergey-slot>');
     const desiredOutput = wrapper(namedContent);
 
     const output = compileTemplate(input, { named: namedContent });
@@ -146,7 +142,7 @@ describe('Slot compilation', () => {
     const namedContent = 'Named content';
 
     const input = wrapper(
-      `<sergey-slot name="named">Default content</sergey-slot>`
+      '<sergey-slot name="named">Default content</sergey-slot>',
     );
     const desiredOutput = wrapper(namedContent);
 
@@ -159,12 +155,12 @@ describe('Slot compilation', () => {
     const defaultContent = 'Default content';
 
     const input = wrapper(
-      `<sergey-slot name="named">${defaultContent}</sergey-slot>`
+      `<sergey-slot name="named">${defaultContent}</sergey-slot>`,
     );
     const desiredOutput = wrapper(defaultContent);
 
     const output = compileTemplate(input, {
-      named: ''
+      named: '',
     });
 
     expect(output).toBe(desiredOutput);
@@ -188,12 +184,12 @@ describe('Import compilation', () => {
     const content = '<p>Content</p>';
 
     const desiredOutput = `${header()}
-      ${content}
-    ${footer()}`;
+        ${content}
+      ${footer()}`;
 
     const output = compileTemplate(`<sergey-import src="header" />
-      ${content}
-    <sergey-import src="footer"/>`);
+        ${content}
+      <sergey-import src="footer"/>`);
 
     expect(output).toBe(desiredOutput);
   });
@@ -204,8 +200,8 @@ describe('Import compilation', () => {
 
     const desiredOutput = header(content);
     const output = compileTemplate(`<sergey-import src="header">
-      ${content}
-    </sergey-import>`);
+        ${content}
+      </sergey-import>`);
 
     expect(output).toBe(desiredOutput);
   });
@@ -214,11 +210,11 @@ describe('Import compilation', () => {
     const content = '<p>Content</p>';
     primeImport(
       testImport('header.html'),
-      header(`<sergey-slot>${content}</sergey-slot>`)
+      header(`<sergey-slot>${content}</sergey-slot>`),
     );
 
     const desiredOutput = header(content);
-    const output = compileTemplate(`<sergey-import src="header" />`);
+    const output = compileTemplate('<sergey-import src="header" />');
 
     expect(output).toBe(desiredOutput);
   });
@@ -226,16 +222,16 @@ describe('Import compilation', () => {
   test('A basic import with a named slot', () => {
     primeImport(
       testImport('header.html'),
-      header(`<sergey-slot name="headerName" />`)
+      header('<sergey-slot name="headerName" />'),
     );
     const content = '<h1>Header</h1>';
 
     const desiredOutput = header(content);
     const output = compileTemplate(`<sergey-import src="header">
-      <sergey-template name="headerName">
-        ${content}
-      </sergey-template>
-    </sergey-import>`);
+        <sergey-template name="headerName">
+          ${content}
+        </sergey-template>
+      </sergey-import>`);
 
     expect(output).toBe(desiredOutput);
   });
@@ -244,18 +240,18 @@ describe('Import compilation', () => {
     primeImport(
       testImport('header.html'),
       header(`<sergey-slot name="headerName" />
-    <sergey-slot />`)
+      <sergey-slot />`),
     );
     const content = '<h1>Header</h1>';
 
     const desiredOutput = header(`${content}
-    ${content}`);
+      ${content}`);
     const output = compileTemplate(`<sergey-import src="header">
-      <sergey-template name="headerName">
+        <sergey-template name="headerName">
+          ${content}
+        </sergey-template>
         ${content}
-      </sergey-template>
-      ${content}
-    </sergey-import>`);
+      </sergey-import>`);
 
     expect(output).toBe(desiredOutput);
   });
@@ -264,11 +260,11 @@ describe('Import compilation', () => {
     const defaultContent = '<h1>Header</h1>';
     primeImport(
       testImport('header.html'),
-      header(`<sergey-slot name="headerName">${defaultContent}</sergey-slot>`)
+      header(`<sergey-slot name="headerName">${defaultContent}</sergey-slot>`),
     );
 
     const desiredOutput = header(defaultContent);
-    const output = compileTemplate(`<sergey-import src="header" />`);
+    const output = compileTemplate('<sergey-import src="header" />');
 
     expect(output).toBe(desiredOutput);
   });
@@ -280,7 +276,7 @@ describe('Markdown compilation', () => {
 
     const desiredOutput = '<h1 id="about-us">About us</h1>';
     const output = compileTemplate(
-      '<sergey-import src="about" as="markdown" />'
+      '<sergey-import src="about" as="markdown" />',
     );
 
     expect(output).toBe(desiredOutput);
@@ -290,14 +286,14 @@ describe('Markdown compilation', () => {
     primeImport(
       testImport('about.md'),
       `# About us
-Content is **great**.`
+Content is **great**.`,
     );
 
     const desiredOutput = `<h1 id="about-us">About us</h1>
 <p>Content is <strong>great</strong>.</p>`;
 
     const output = compileTemplate(
-      '<sergey-import src="about" as="markdown" />'
+      '<sergey-import src="about" as="markdown" />',
     );
 
     expect(output).toBe(desiredOutput);
@@ -306,27 +302,28 @@ Content is **great**.`
   test('Multiline markdown with code block', () => {
     primeImport(
       testImport('code.md'),
-      `<sergey-import src="snippet" as="markdown" />`
+      '<sergey-import src="snippet" as="markdown" />',
     );
 
     primeImport(
       testImport('snippet.md'),
       `# Example code block
-
-\`\`\`html
-<article>
+  
+  \`\`\`html
+  <article>
   <sergey-import src="code" as="markdown" />
-</article>
-\`\`\`
-`
+  </article>
+  \`\`\`
+  `,
     );
     const desiredOutput = `<h1 id="example-code-block">Example code block</h1>
 <pre><code class="language-html">&lt;article&gt;
-  &lt;sergey-import src=&quot;code&quot; as=&quot;markdown&quot; /&gt;
-&lt;/article&gt;</code></pre>`;
+&lt;sergey-import src=&quot;code&quot; as=&quot;markdown&quot; /&gt;
+&lt;/article&gt;
+</code></pre>`;
 
     const output = compileTemplate(
-      '<sergey-import src="code" as="markdown" />'
+      '<sergey-import src="code" as="markdown" />',
     );
 
     expect(output).toBe(desiredOutput);
@@ -335,8 +332,8 @@ Content is **great**.`
 
 describe('Link compilation', () => {
   test('A link', () => {
-    const input = `<sergey-link to="/example/">Example Link</sergey-link>`;
-    const desiredOutput = `<a href="/example/">Example Link</a>`;
+    const input = '<sergey-link to="/example/">Example Link</sergey-link>';
+    const desiredOutput = '<a href="/example/">Example Link</a>';
     const output = compileLinks(input);
 
     expect(output).toBe(desiredOutput);
@@ -344,22 +341,22 @@ describe('Link compilation', () => {
 
   test('Multiple links', () => {
     const input = `
-      <sergey-link to="/example-1/">Example Link 1</sergey-link>
-      <sergey-link to="/example-2/">Example Link 2</sergey-link>
-      <sergey-link to="/example-3/">Example Link 3</sergey-link>
-      `;
+        <sergey-link to="/example-1/">Example Link 1</sergey-link>
+        <sergey-link to="/example-2/">Example Link 2</sergey-link>
+        <sergey-link to="/example-3/">Example Link 3</sergey-link>
+        `;
     const desiredOutput = `
-      <a href="/example-1/">Example Link 1</a>
-      <a href="/example-2/">Example Link 2</a>
-      <a href="/example-3/">Example Link 3</a>
-      `;
+        <a href="/example-1/">Example Link 1</a>
+        <a href="/example-2/">Example Link 2</a>
+        <a href="/example-3/">Example Link 3</a>
+        `;
     const output = compileLinks(input);
 
     expect(output).toBe(desiredOutput);
   });
 
   test('A link to identical current path', () => {
-    const input = `<sergey-link to="/example/index.html">Example</sergey-link>`;
+    const input = '<sergey-link to="/example/index.html">Example</sergey-link>';
     const path = '/example/index.html';
 
     const desiredOutput = `<a href="/example/index.html" class="${ACTIVE_CLASS}" aria-current="page">Example</a>`;
@@ -369,7 +366,7 @@ describe('Link compilation', () => {
   });
 
   test('A link to start of current path', () => {
-    const input = `<sergey-link to="/example/">Example</sergey-link>`;
+    const input = '<sergey-link to="/example/">Example</sergey-link>';
     const path = '/example/index.html';
 
     const desiredOutput = `<a href="/example/" class="${ACTIVE_CLASS}" aria-current="page">Example</a>`;
@@ -379,7 +376,7 @@ describe('Link compilation', () => {
   });
 
   test('A link to a parent path', () => {
-    const input = `<sergey-link to="/example/">Example</sergey-link>`;
+    const input = '<sergey-link to="/example/">Example</sergey-link>';
     const path = '/example/foo/index.html';
 
     const desiredOutput = `<a href="/example/" class="${ACTIVE_CLASS}">Example</a>`;
@@ -391,15 +388,15 @@ describe('Link compilation', () => {
   test('Multiple links, with 1 current', () => {
     const path = '/example-1/';
     const input = `
-      <sergey-link to="/example-1/">Example Link 1</sergey-link>
-      <sergey-link to="/example-2/">Example Link 2</sergey-link>
-      <sergey-link to="/example-3/">Example Link 3</sergey-link>
-      `;
+        <sergey-link to="/example-1/">Example Link 1</sergey-link>
+        <sergey-link to="/example-2/">Example Link 2</sergey-link>
+        <sergey-link to="/example-3/">Example Link 3</sergey-link>
+        `;
     const desiredOutput = `
-      <a href="/example-1/" class="${ACTIVE_CLASS}" aria-current="page">Example Link 1</a>
-      <a href="/example-2/">Example Link 2</a>
-      <a href="/example-3/">Example Link 3</a>
-      `;
+        <a href="/example-1/" class="${ACTIVE_CLASS}" aria-current="page">Example Link 1</a>
+        <a href="/example-2/">Example Link 2</a>
+        <a href="/example-3/">Example Link 3</a>
+        `;
     const output = compileLinks(input, path);
 
     expect(output).toBe(desiredOutput);
@@ -408,15 +405,15 @@ describe('Link compilation', () => {
   test('Multiple links, with 1 parent', () => {
     const path = '/example-1/foo/index.html';
     const input = `
-      <sergey-link to="/example-1/">Example Link 1</sergey-link>
-      <sergey-link to="/example-2/">Example Link 2</sergey-link>
-      <sergey-link to="/example-3/">Example Link 3</sergey-link>
-      `;
+        <sergey-link to="/example-1/">Example Link 1</sergey-link>
+        <sergey-link to="/example-2/">Example Link 2</sergey-link>
+        <sergey-link to="/example-3/">Example Link 3</sergey-link>
+        `;
     const desiredOutput = `
-      <a href="/example-1/" class="${ACTIVE_CLASS}">Example Link 1</a>
-      <a href="/example-2/">Example Link 2</a>
-      <a href="/example-3/">Example Link 3</a>
-      `;
+        <a href="/example-1/" class="${ACTIVE_CLASS}">Example Link 1</a>
+        <a href="/example-2/">Example Link 2</a>
+        <a href="/example-3/">Example Link 3</a>
+        `;
     const output = compileLinks(input, path);
 
     expect(output).toBe(desiredOutput);
@@ -425,11 +422,11 @@ describe('Link compilation', () => {
   test('Home link, current', () => {
     const path = '/index.html';
     const input = `
-      <sergey-link to="/">Home</sergey-link>
-      `;
+        <sergey-link to="/">Home</sergey-link>
+        `;
     const desiredOutput = `
-      <a href="/" class="${ACTIVE_CLASS}" aria-current="page">Home</a>
-      `;
+        <a href="/" class="${ACTIVE_CLASS}" aria-current="page">Home</a>
+        `;
     const output = compileLinks(input, path);
 
     expect(output).toBe(desiredOutput);
@@ -438,11 +435,11 @@ describe('Link compilation', () => {
   test('Home link, not current', () => {
     const path = '/about/index.html';
     const input = `
-      <sergey-link to="/">Home</sergey-link>
-      `;
+        <sergey-link to="/">Home</sergey-link>
+        `;
     const desiredOutput = `
-      <a href="/" class="${ACTIVE_CLASS}">Home</a>
-      `;
+        <a href="/" class="${ACTIVE_CLASS}">Home</a>
+        `;
     const output = compileLinks(input, path);
 
     expect(output).toBe(desiredOutput);
@@ -451,11 +448,11 @@ describe('Link compilation', () => {
   test('Link to partial, not current', () => {
     const path = '/about/index.html';
     const input = `
-      <sergey-link to="/#subscribe">Subscribe</sergey-link>
-      `;
+        <sergey-link to="/#subscribe">Subscribe</sergey-link>
+        `;
     const desiredOutput = `
-      <a href="/#subscribe" class="${ACTIVE_CLASS}">Subscribe</a>
-      `;
+        <a href="/#subscribe" class="${ACTIVE_CLASS}">Subscribe</a>
+        `;
     const output = compileLinks(input, path);
 
     expect(output).toBe(desiredOutput);
@@ -464,11 +461,11 @@ describe('Link compilation', () => {
   test('Link with front-loaded classes', () => {
     const path = '/index.html';
     const input = `
-      <sergey-link class="my-class" to="/">Home</sergey-link>
-      `;
+        <sergey-link class="my-class" to="/">Home</sergey-link>
+        `;
     const desiredOutput = `
-      <a href="/" class="${ACTIVE_CLASS} my-class" aria-current="page">Home</a>
-      `;
+        <a href="/" class="${ACTIVE_CLASS} my-class" aria-current="page">Home</a>
+        `;
     const output = compileLinks(input, path);
 
     expect(output).toBe(desiredOutput);
@@ -477,11 +474,11 @@ describe('Link compilation', () => {
   test('Link with back-loaded classes', () => {
     const path = '/index.html';
     const input = `
-      <sergey-link to="/" class="my-class">Home</sergey-link>
-      `;
+        <sergey-link to="/" class="my-class">Home</sergey-link>
+        `;
     const desiredOutput = `
-      <a href="/" class="${ACTIVE_CLASS} my-class" aria-current="page">Home</a>
-      `;
+        <a href="/" class="${ACTIVE_CLASS} my-class" aria-current="page">Home</a>
+        `;
     const output = compileLinks(input, path);
 
     expect(output).toBe(desiredOutput);
@@ -490,11 +487,11 @@ describe('Link compilation', () => {
   test('Link with other attributes', () => {
     const path = '/index.html';
     const input = `
-      <sergey-link to="/" id="an-id">Home</sergey-link>
-      `;
+        <sergey-link to="/" id="an-id">Home</sergey-link>
+        `;
     const desiredOutput = `
-      <a href="/" id="an-id" class="${ACTIVE_CLASS}" aria-current="page">Home</a>
-      `;
+        <a href="/" id="an-id" class="${ACTIVE_CLASS}" aria-current="page">Home</a>
+        `;
     const output = compileLinks(input, path);
 
     expect(output).toBe(desiredOutput);
@@ -503,11 +500,11 @@ describe('Link compilation', () => {
   test('Link with ids and classes', () => {
     const path = '/index.html';
     const input = `
-      <sergey-link to="/" class="my-class" id="an-id">Home</sergey-link>
-      `;
+        <sergey-link to="/" class="my-class" id="an-id">Home</sergey-link>
+        `;
     const desiredOutput = `
-      <a href="/" class="${ACTIVE_CLASS} my-class" id="an-id" aria-current="page">Home</a>
-      `;
+        <a href="/" class="${ACTIVE_CLASS} my-class" id="an-id" aria-current="page">Home</a>
+        `;
     const output = compileLinks(input, path);
 
     expect(output).toBe(desiredOutput);
@@ -515,11 +512,11 @@ describe('Link compilation', () => {
 
   test('Link with href, rather than to', () => {
     const input = `
-      <sergey-link href="/example-1/">Example Link 1</sergey-link>
-      `;
+        <sergey-link href="/example-1/">Example Link 1</sergey-link>
+        `;
     const desiredOutput = `
-      <a href="/example-1/">Example Link 1</a>
-      `;
+        <a href="/example-1/">Example Link 1</a>
+        `;
     const output = compileLinks(input);
 
     expect(output).toBe(desiredOutput);
