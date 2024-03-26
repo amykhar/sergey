@@ -1,4 +1,4 @@
 #!/usr/bin/env node
-const { sergeyRuntime } = require('./src');
+import { sergeyRuntime } from './src';
 
-sergeyRuntime();
+sergeyRuntime().then(r => console.log(r));

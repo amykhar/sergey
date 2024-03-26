@@ -455,7 +455,7 @@ const excludeGitIgnoreContents = async () => {
   }
 };
 
-const sergeyRuntime = async () => {
+export const sergeyRuntime = async () => {
   if (!OUTPUT.startsWith('./')) {
     Process.stderr.write('DANGER! Make sure you start the root with a ./');
     return;
