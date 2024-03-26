@@ -4,7 +4,7 @@ import { performance } from 'perf_hooks';
 import { marked } from 'marked';
 import { gfmHeadingId } from 'marked-gfm-heading-id';
 import { markedXhtml } from 'marked-xhtml';
-import 'dotenv/config';
+import 'dotenv/config.js';
 import * as Process from 'process';
 import chokidar from 'chokidar';
 import connect from 'connect';
