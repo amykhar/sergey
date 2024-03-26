@@ -1,4 +1,4 @@
 #!/usr/bin/env node
-import { sergeyRuntime } from './src';
+import { sergeyRuntime } from './src/index.js';
 
-sergeyRuntime().then(r => console.log(r));
+sergeyRuntime();
