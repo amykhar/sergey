@@ -91,30 +91,38 @@ const createFolder = path => {
   });
 };
 
-const readDir = (path) => new Promise((resolve, reject) => {
-  fs.readdir(path, (err, data) => (err ? reject(err) : resolve(data)));
-});
-
-const readFile = (path) => new Promise((resolve, reject) => {
-  fs.readFile(path, (err, data) => (err ? reject(err) : resolve(data.toString())));
-});
-
-const writeFile = (path, body) => new Promise((resolve, reject) => {
-  fs.writeFile(path, body, (err) => {
-    if (err) {
-      return reject(err);
-    }
-
-    VERBOSE && Process.stdout.write(`Saved ${path}`);
-    return resolve();
+const readDir = path => {
+  return new Promise((resolve, reject) => {
+    fs.readdir(path, (err, data) => (err ? reject(err) : resolve(data)));
   });
-});
+};
+
+const readFile = path => {
+  return new Promise((resolve, reject) => {
+    fs.readFile(path, (err, data) =>
+        err ? reject(err) : resolve(data.toString())
+    );
+  });
+};
+
+const writeFile = (path, body) => {
+  return new Promise((resolve, reject) => {
+    fs.writeFile(path, body, err => {
+      if (err) {
+        return reject(err);
+      }
+
+      return resolve();
+    });
+  });
+};
+
 
 const clearOutputFolder = async () => {
-  const deleteFolder = (path) => {
+  const deleteFolder = path => {
     if (fs.existsSync(path)) {
-      fs.readdirSync(path).forEach((file, index) => {
-        const newPath = `${path}/${file}`;
+      fs.readdirSync(path).forEach(function(file, index) {
+        const newPath = path + '/' + file;
         if (fs.lstatSync(newPath).isDirectory()) {
           deleteFolder(newPath);
         } else {
@@ -189,7 +197,7 @@ const isParentPage = (ref, path) => path && cleanPath(path).startsWith(cleanPath
 /**
  * #business logic
  */
-const prepareImports = async (folder) => {
+const prepareImports = async folder => {
   const fileNames = await getAllFiles(folder);
   const bodies = await Promise.all(fileNames.map(readFile));
   fileNames.forEach((path, i) => primeImport(path, bodies[i]));
@@ -280,7 +288,7 @@ const compileImport = (body, pattern) => {
       pattern.lastIndex++;
     }
 
-    const [find, key, htmlAs = '', content = ''] = m;
+    let [find, key, htmlAs = '', content = ''] = m;
     let replace = '';
 
     if (htmlAs === 'markdown') {
@@ -313,10 +321,11 @@ export const compileTemplate = (body, slots = { default: '' }) => {
   body = compileImport(body, patterns.simpleImports);
   body = compileImport(body, patterns.complexImports);
 
+
   return body;
 };
 
-export const compileLinks = (body, path) => {
+const compileLinks = (body, path) => {
   let m;
   let copy;
 
@@ -327,17 +336,18 @@ export const compileLinks = (body, path) => {
   copy = body;
   while ((m = patterns.links.exec(body)) !== null) {
     if (m.index === patterns.links.lastIndex) {
-      patterns.links.lastIndex = patterns.links.lastIndex + 1;
+      patterns.links.lastIndex++;
     }
 
-    const [find, attr1 = '', to, attr2 = '', content] = m;
+    let [find, attr1 = '', to, attr2 = '', content] = m;
     let replace = '';
     let attributes = [`href="${to}"`, attr1, attr2]
-      .map((x) => x.trim())
-      .filter(Boolean)
-      .join(' ');
+        .map(x => x.trim())
+        .filter(Boolean)
+        .join(' ');
 
     const isCurrent = isCurrentPage(to, path);
+    // todo fix active
     if (isCurrent || isParentPage(to, path)) {
       if (attributes.includes('class="')) {
         attributes = attributes.replace('class="', `class="${ACTIVE_CLASS} `);
@@ -373,44 +383,47 @@ const compileFolder = async (localFolder, localPublicFolder) => {
       }
 
       Promise.all(
-        files
-          .filter((x) => !excludedFolders.find((y) => x.startsWith(y)))
-          .map(async (localFilePath) => {
-            const fullFilePath = `${fullFolderPath}${localFilePath}`;
-            const fullPublicFilePath = `${fullPublicPath}${localFilePath}`;
-            const fullLocalFilePath = `/${localFolder}${localFilePath}`;
+          files
+              .filter(x => {
+                return !excludedFolders.find(y => x.startsWith(y));
+              })
+              .map(async localFilePath => {
+                const fullFilePath = `${fullFolderPath}${localFilePath}`;
+                const fullPublicFilePath = `${fullPublicPath}${localFilePath}`;
+                const fullLocalFilePath = `/${localFolder}${localFilePath}`;
 
-            if (localFilePath.endsWith('.html')) {
-              return readFile(fullFilePath)
-                .then(compileTemplate)
-                .then((body) => compileLinks(body, fullLocalFilePath))
-                .then((body) => writeFile(fullPublicFilePath, body));
-            }
-
-            return new Promise((resolve, reject) => {
-              fs.stat(fullFilePath, async (errr, stat) => {
-                if (errr) {
-                  return reject(errr);
+                if (localFilePath.endsWith('.html')) {
+                  return readFile(fullFilePath)
+                      .then(compileTemplate)
+                      .then(body => compileLinks(body, fullLocalFilePath))
+                      .then(body => writeFile(fullPublicFilePath, body));
                 }
 
-                if (stat && stat.isDirectory()) {
-                  await compileFolder(
-                    `${localFolder}${localFilePath}/`,
-                    `${OUTPUT_LOCAL}/${localFolder}${localFilePath}/`,
-                  );
-                } else {
-                  await copyFile(fullFilePath, fullPublicFilePath);
-                }
-                return resolve();
-              });
-            });
-          }),
+                return new Promise((resolve, reject) => {
+                  fs.stat(fullFilePath, async (err, stat) => {
+                    if (err) {
+                      return reject(err);
+                    }
+
+                    if (stat && stat.isDirectory()) {
+                      await compileFolder(
+                          `${localFolder}${localFilePath}/`,
+                          `${OUTPUT_LOCAL}/${localFolder}${localFilePath}/`
+                      );
+                    } else {
+                      await copyFile(fullFilePath, fullPublicFilePath);
+                    }
+                    return resolve();
+                  });
+                });
+              })
       )
-        .then(resolve)
-        .catch(reject);
+          .then(resolve)
+          .catch(reject);
     });
   });
 };
+
 
 const compileFiles = async () => {
   try {
@@ -431,7 +444,6 @@ const compileFiles = async () => {
         await readDir(CONTENT);
         await prepareImports(CONTENT);
       } catch (e) {
-        // do nothing
       }
     }
 
@@ -460,11 +472,6 @@ const excludeGitIgnoreContents = async () => {
 };
 
 export const sergeyRuntime = async () => {
-  if (!OUTPUT.startsWith('./')) {
-    Process.stderr.write('DANGER! Make sure you start the root with a ./');
-    return;
-  }
-
   if (!ROOT.endsWith('/')) {
     Process.stderr.write('Make sure you end the root with a /');
     return;
