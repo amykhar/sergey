@@ -77,15 +77,19 @@ const copyFile = (src, dest) => new Promise((resolve, reject) => {
   });
 });
 
-const createFolder = (path) => new Promise((resolve, reject) => {
-  fs.readdir(path, (err) => {
-    if (err) {
-      fs.mkdir(path, (err, data) => (err ? reject(`Couldn't create folder: ${path}`) : resolve()));
-    } else {
-      return resolve();
-    }
+const createFolder = path => {
+  return new Promise((resolve, reject) => {
+    fs.readdir(path, (err, data) => {
+      if (err) {
+        fs.mkdir(path, (err, data) => {
+          return err ? reject(`Couldn't create folder: ${path}`) : resolve();
+        });
+      } else {
+        return resolve();
+      }
+    });
   });
-});
+};
 
 const readDir = (path) => new Promise((resolve, reject) => {
   fs.readdir(path, (err, data) => (err ? reject(err) : resolve(data)));
