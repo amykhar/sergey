@@ -1,25 +1,29 @@
 #!/usr/bin/env node
-const fs = require('fs');
-const { performance } = require('perf_hooks');
-const marked = require('marked');
-require('dotenv').config();
+import * as fs from 'node:fs';
+import { performance } from 'perf_hooks';
+import { marked } from 'marked';
+import { gfmHeadingId } from 'marked-gfm-heading-id';
+import { markedXhtml } from 'marked-xhtml';
+import 'dotenv/config';
+import * as Process from 'process';
+import chokidar from 'chokidar';
+import connect from 'connect';
+import serveStatic from 'serve-static';
 
 /**
- * Environment varibales
+ * Environment variables
  */
-const getEnv = (argKey, envKey) => {
-  return (
-    process.env[envKey] ||
-    (process.argv.find(x => x.startsWith(argKey)) || '').replace(argKey, '')
-  );
-};
+const getEnv = (argKey, envKey) => (
+  process.env[envKey]
+        || (process.argv.find((x) => x.startsWith(argKey)) || '').replace(argKey, '')
+);
 const isWatching = process.argv.includes('--watch');
 
 const ROOT = getEnv('--root=', 'SERGEY_ROOT') || './';
 const PORT = Number(getEnv('--port=', 'SERGEY_PORT')) || 8080;
 
 const IMPORTS_LOCAL = getEnv('--imports=', 'SERGEY_IMPORTS') || '_imports';
-const IMPORTS = `${ROOT}${IMPORTS_LOCAL}/`;
+export const IMPORTS = `${ROOT}${IMPORTS_LOCAL}/`;
 
 const CONTENT_LOCAL = getEnv('--content=', 'SERGEY_CONTENT') || '_imports';
 const CONTENT = `${ROOT}${CONTENT_LOCAL}/`;
@@ -27,12 +31,11 @@ const CONTENT = `${ROOT}${CONTENT_LOCAL}/`;
 const OUTPUT_LOCAL = getEnv('--output=', 'SERGEY_OUTPUT') || 'public';
 const OUTPUT = `${ROOT}${OUTPUT_LOCAL}/`;
 
-const ACTIVE_CLASS =
-  getEnv('--active-class=', 'SERGEY_ACTIVE_CLASS') || 'active';
+export const ACTIVE_CLASS = getEnv('--active-class=', 'SERGEY_ACTIVE_CLASS') || 'active';
 
 const EXCLUDE = (getEnv('--exclude=', 'SERGEY_EXCLUDE') || '')
   .split(',')
-  .map(x => x.trim())
+  .map((x) => x.trim())
   .filter(Boolean);
 
 const VERBOSE = false;
@@ -47,83 +50,67 @@ const excludedFolders = [
   'package-lock.json',
   IMPORTS_LOCAL,
   OUTPUT_LOCAL,
-  ...EXCLUDE
+  ...EXCLUDE,
 ];
 
 const patterns = {
   whitespace: /^\s+|\s+$/g,
-  templates: /<sergey-template name="([a-zA-Z0-9-_.\\\/]*)">(.*?)<\/sergey-template>/gms,
-  complexNamedSlots: /<sergey-slot name="([a-zA-Z0-9-_.\\\/]*)">(.*?)<\/sergey-slot>/gms,
-  simpleNamedSlots: /<sergey-slot name="([a-zA-Z0-9-_.\\\/]*)"\s?\/>/gm,
+  templates: /<sergey-template name="([a-zA-Z0-9-_.\\/]*)">(.*?)<\/sergey-template>/gms,
+  complexNamedSlots: /<sergey-slot name="([a-zA-Z0-9-_.\\/]*)">(.*?)<\/sergey-slot>/gms,
+  simpleNamedSlots: /<sergey-slot name="([a-zA-Z0-9-_.\\/]*)"\s?\/>/gm,
   complexDefaultSlots: /<sergey-slot>(.*?)<\/sergey-slot>/gms,
   simpleDefaultSlots: /<sergey-slot\s?\/>/gm,
-  complexImports: /<sergey-import src="([a-zA-Z0-9-_.\\\/]*)"(?:\sas="(.*?)")?>(.*?)<\/sergey-import>/gms,
-  simpleImports: /<sergey-import src="([a-zA-Z0-9-_.\\\/]*)"(?:\sas="(.*?)")?\s?\/>/gm,
-  links: /<sergey-link\s?(.*?)(?:to|href)="([a-zA-Z0-9-_.#?\\\/]*)"\s?(.*?)>(.*?)<\/sergey-link>/gms
+  complexImports: /<sergey-import src="([a-zA-Z0-9-_.\\/]*)"(?:\sas="(.*?)")?>(.*?)<\/sergey-import>/gms,
+  simpleImports: /<sergey-import src="([a-zA-Z0-9-_.\\/]*)"(?:\sas="(.*?)")?\s?\/>/gm,
+  links: /<sergey-link\s?(.*?)(?:to|href)="([a-zA-Z0-9-_.#?\\/]*)"\s?(.*?)>(.*?)<\/sergey-link>/gms,
 };
 
-/**
- * FS utils
- */
-const copyFile = (src, dest) => {
-  return new Promise((resolve, reject) => {
-    fs.copyFile(src, dest, err => {
-      if (err) {
-        return reject(err);
-      } else {
-        VERBOSE && console.log(`Copied ${src}`);
-        resolve();
-      }
-    });
+const copyFile = (src, dest) => new Promise((resolve, reject) => {
+  fs.copyFile(src, dest, (err) => {
+    if (err) {
+      return reject(err);
+    }
+    if (VERBOSE) {
+      Process.stdout.write(`Copied ${src}`);
+    }
+    return resolve();
   });
-};
+});
 
-const createFolder = path => {
-  return new Promise((resolve, reject) => {
-    fs.readdir(path, (err, data) => {
-      if (err) {
-        fs.mkdir(path, (err, data) => {
-          return err ? reject(`Couldn't create folder: ${path}`) : resolve();
-        });
-      } else {
-        return resolve();
-      }
-    });
-  });
-};
-
-const readDir = path => {
-  return new Promise((resolve, reject) => {
-    fs.readdir(path, (err, data) => (err ? reject(err) : resolve(data)));
-  });
-};
-
-const readFile = path => {
-  return new Promise((resolve, reject) => {
-    fs.readFile(path, (err, data) =>
-      err ? reject(err) : resolve(data.toString())
-    );
-  });
-};
-
-const writeFile = (path, body) => {
-  return new Promise((resolve, reject) => {
-    fs.writeFile(path, body, err => {
-      if (err) {
-        return reject(err);
-      }
-
-      VERBOSE && console.log(`Saved ${path}`);
+const createFolder = (path) => new Promise((resolve, reject) => {
+  fs.readdir(path, (err) => {
+    if (err) {
+      fs.mkdir(path, (err, data) => (err ? reject(`Couldn't create folder: ${path}`) : resolve()));
+    } else {
       return resolve();
-    });
+    }
   });
-};
+});
+
+const readDir = (path) => new Promise((resolve, reject) => {
+  fs.readdir(path, (err, data) => (err ? reject(err) : resolve(data)));
+});
+
+const readFile = (path) => new Promise((resolve, reject) => {
+  fs.readFile(path, (err, data) => (err ? reject(err) : resolve(data.toString())));
+});
+
+const writeFile = (path, body) => new Promise((resolve, reject) => {
+  fs.writeFile(path, body, (err) => {
+    if (err) {
+      return reject(err);
+    }
+
+    VERBOSE && Process.stdout.write(`Saved ${path}`);
+    return resolve();
+  });
+});
 
 const clearOutputFolder = async () => {
-  const deleteFolder = path => {
+  const deleteFolder = (path) => {
     if (fs.existsSync(path)) {
-      fs.readdirSync(path).forEach(function(file, index) {
-        const newPath = path + '/' + file;
+      fs.readdirSync(path).forEach((file, index) => {
+        const newPath = `${path}/${file}`;
         if (fs.lstatSync(newPath).isDirectory()) {
           deleteFolder(newPath);
         } else {
@@ -156,11 +143,11 @@ const getAllFiles = (path, filter, exclude = false) => {
 
   if (fs.existsSync(path)) {
     fs.readdirSync(path).forEach((file, index) => {
-      if (filesToIgnore.find(x => file.startsWith(x))) {
+      if (filesToIgnore.find((x) => file.startsWith(x))) {
         return;
       }
 
-      const newPath = path + '/' + file;
+      const newPath = `${path}/${file}`;
       if (fs.lstatSync(newPath).isDirectory()) {
         files.push(...getAllFiles(newPath, filter, exclude));
       } else {
@@ -176,47 +163,44 @@ const getAllFiles = (path, filter, exclude = false) => {
   return files;
 };
 
-const getFilesToWatch = path => {
-  return getAllFiles(path, '', true);
-};
-
 /**
  * Helpers
  */
-const formatContent = x => x.replace(patterns.whitespace, '');
+const formatContent = (x) => x.replace(patterns.whitespace, '');
 const getKey = (key, ext = '.html', folder = '') => {
   const file = key.endsWith(ext) ? key : `${key}${ext}`;
   return `${folder}${file}`;
 };
-const hasImports = x => x.includes('<sergey-import');
-const hasLinks = x => x.includes('<sergey-link');
-const primeExcludedFiles = name => {
+const hasImports = (x) => x.includes('<sergey-import');
+const hasLinks = (x) => x.includes('<sergey-link');
+const primeExcludedFiles = (name) => {
   if (!excludedFolders.includes(name)) {
     excludedFolders.push(name);
   }
 };
-const cleanPath = path => path.replace('index.html', '').split('#')[0];
+const cleanPath = (path) => path.replace('index.html', '').split('#')[0];
 const isCurrentPage = (ref, path) => path && cleanPath(path) === cleanPath(ref);
-const isParentPage = (ref, path) =>
-  path && cleanPath(path).startsWith(cleanPath(ref));
+const isParentPage = (ref, path) => path && cleanPath(path).startsWith(cleanPath(ref));
 
 /**
  * #business logic
  */
-const prepareImports = async folder => {
+const prepareImports = async (folder) => {
   const fileNames = await getAllFiles(folder);
   const bodies = await Promise.all(fileNames.map(readFile));
   fileNames.forEach((path, i) => primeImport(path, bodies[i]));
 };
 
-const primeImport = (path, body) => {
+export const primeImport = (path, body) => {
   cachedImports[path] = body;
 };
 
-const getSlots = content => {
+const getSlots = (content) => {
+  let m;
+
   // Extract templates first
   const slots = {
-    default: formatContent(content) || ''
+    default: formatContent(content) || '',
   };
 
   // Search content for templates
@@ -292,12 +276,14 @@ const compileImport = (body, pattern) => {
       pattern.lastIndex++;
     }
 
-    let [find, key, htmlAs = '', content = ''] = m;
+    const [find, key, htmlAs = '', content = ''] = m;
     let replace = '';
 
     if (htmlAs === 'markdown') {
+      marked.use(gfmHeadingId());
+      marked.use(markedXhtml());
       replace = formatContent(
-        marked(cachedImports[getKey(key, '.md', CONTENT)] || '')
+        marked.parse(cachedImports[getKey(key, '.md', CONTENT)] || ''),
       );
     } else {
       replace = cachedImports[getKey(key, '.html', IMPORTS)] || '';
@@ -313,7 +299,7 @@ const compileImport = (body, pattern) => {
   return body;
 };
 
-const compileTemplate = (body, slots = { default: '' }) => {
+export const compileTemplate = (body, slots = { default: '' }) => {
   body = compileSlots(body, slots);
 
   if (!hasImports(body)) {
@@ -326,7 +312,7 @@ const compileTemplate = (body, slots = { default: '' }) => {
   return body;
 };
 
-const compileLinks = (body, path) => {
+export const compileLinks = (body, path) => {
   let m;
   let copy;
 
@@ -337,13 +323,13 @@ const compileLinks = (body, path) => {
   copy = body;
   while ((m = patterns.links.exec(body)) !== null) {
     if (m.index === patterns.links.lastIndex) {
-      patterns.links.lastIndex++;
+      patterns.links.lastIndex = patterns.links.lastIndex + 1;
     }
 
-    let [find, attr1 = '', to, attr2 = '', content] = m;
+    const [find, attr1 = '', to, attr2 = '', content] = m;
     let replace = '';
     let attributes = [`href="${to}"`, attr1, attr2]
-      .map(x => x.trim())
+      .map((x) => x.trim())
       .filter(Boolean)
       .join(' ');
 
@@ -384,10 +370,8 @@ const compileFolder = async (localFolder, localPublicFolder) => {
 
       Promise.all(
         files
-          .filter(x => {
-            return !excludedFolders.find(y => x.startsWith(y));
-          })
-          .map(async localFilePath => {
+          .filter((x) => !excludedFolders.find((y) => x.startsWith(y)))
+          .map(async (localFilePath) => {
             const fullFilePath = `${fullFolderPath}${localFilePath}`;
             const fullPublicFilePath = `${fullPublicPath}${localFilePath}`;
             const fullLocalFilePath = `/${localFolder}${localFilePath}`;
@@ -395,20 +379,20 @@ const compileFolder = async (localFolder, localPublicFolder) => {
             if (localFilePath.endsWith('.html')) {
               return readFile(fullFilePath)
                 .then(compileTemplate)
-                .then(body => compileLinks(body, fullLocalFilePath))
-                .then(body => writeFile(fullPublicFilePath, body));
+                .then((body) => compileLinks(body, fullLocalFilePath))
+                .then((body) => writeFile(fullPublicFilePath, body));
             }
 
             return new Promise((resolve, reject) => {
-              fs.stat(fullFilePath, async (err, stat) => {
-                if (err) {
-                  return reject(err);
+              fs.stat(fullFilePath, async (errr, stat) => {
+                if (errr) {
+                  return reject(errr);
                 }
 
                 if (stat && stat.isDirectory()) {
                   await compileFolder(
                     `${localFolder}${localFilePath}/`,
-                    `${OUTPUT_LOCAL}/${localFolder}${localFilePath}/`
+                    `${OUTPUT_LOCAL}/${localFolder}${localFilePath}/`,
                   );
                 } else {
                   await copyFile(fullFilePath, fullPublicFilePath);
@@ -416,7 +400,7 @@ const compileFolder = async (localFolder, localPublicFolder) => {
                 return resolve();
               });
             });
-          })
+          }),
       )
         .then(resolve)
         .catch(reject);
@@ -428,7 +412,7 @@ const compileFiles = async () => {
   try {
     await readDir(IMPORTS);
   } catch (e) {
-    console.error(`No ${IMPORTS} folder found`);
+    Process.stderr.write(`No ${IMPORTS} folder found`);
     return;
   }
 
@@ -442,39 +426,43 @@ const compileFiles = async () => {
       try {
         await readDir(CONTENT);
         await prepareImports(CONTENT);
-      } catch (e) {}
+      } catch (e) {
+        // do nothing
+      }
     }
 
     await compileFolder('', `${OUTPUT_LOCAL}/`);
 
     const end = performance.now();
 
-    console.log(`Compiled in ${Math.ceil(end - start)}ms`);
+    Process.stdout.write(`Compiled in ${Math.ceil(end - start)}ms`);
   } catch (e) {
-    console.log(e);
+    Process.stderr.write(e);
   }
 };
 
 const excludeGitIgnoreContents = async () => {
   try {
     const ignore = await readFile('./.gitignore');
-    const exclusions = ignore
+    ignore
       .split('\n')
-      .map(x => (x.endsWith('/') ? x.substring(0, x.length - 1) : x))
-      .map(x => (x.startsWith('/') ? x.substring(1, x.length) : x))
+      .map((x) => (x.endsWith('/') ? x.substring(0, x.length - 1) : x))
+      .map((x) => (x.startsWith('/') ? x.substring(1, x.length) : x))
       .filter(Boolean)
       .map(primeExcludedFiles);
-  } catch (e) {}
+  } catch (e) {
+    // do nothing
+  }
 };
 
 const sergeyRuntime = async () => {
   if (!OUTPUT.startsWith('./')) {
-    console.error('DANGER! Make sure you start the root with a ./');
+    Process.stderr.write('DANGER! Make sure you start the root with a ./');
     return;
   }
 
   if (!ROOT.endsWith('/')) {
-    console.error('Make sure you end the root with a /');
+    Process.stderr.write('Make sure you end the root with a /');
     return;
   }
 
@@ -482,19 +470,15 @@ const sergeyRuntime = async () => {
   await compileFiles();
 
   if (isWatching) {
-    const chokidar = require('chokidar');
-    const connect = require('connect');
-    const serveStatic = require('serve-static');
-
     const watchRoot = ROOT.endsWith('/')
       ? ROOT.substring(0, ROOT.length - 1)
       : ROOT;
-    let ignored = (OUTPUT.endsWith('/')
+    const ignored = (OUTPUT.endsWith('/')
       ? OUTPUT.substring(0, OUTPUT.length - 1)
       : OUTPUT
     ).replace('./', '');
 
-    const task = async () => await compileFiles();
+    const task = async () => compileFiles();
 
     const watcher = chokidar.watch(watchRoot, { ignored, ignoreInitial: true });
     watcher.on('change', task);
@@ -503,18 +487,8 @@ const sergeyRuntime = async () => {
 
     connect()
       .use(serveStatic(OUTPUT))
-      .listen(PORT, function() {
-        console.log(`Sergey running on http://localhost:${PORT}`);
+      .listen(PORT, () => {
+        Process.stdout.write(`Sergey running on http://localhost:${PORT}`);
       });
   }
-};
-
-module.exports = {
-  sergeyRuntime,
-  compileTemplate,
-  compileLinks,
-  primeImport,
-  CONTENT,
-  IMPORTS,
-  ACTIVE_CLASS
 };
