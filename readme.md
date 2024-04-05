@@ -1,4 +1,5 @@
-# amykhar's Sergey Fork
+# SiteServant
+Based on [Sergey](https://sergey.cool)
 
 ## The little static site generator
 Sergey is a tiny lil’ static site generator. It’s a progressive tool designed to site atop your already brilliant HTML. In essence, Sergey is HTML + partials with slots thrown in for good measure.
